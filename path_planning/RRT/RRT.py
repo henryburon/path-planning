@@ -5,7 +5,7 @@ import numpy as np
 import imageio as iio
 import time
 
-np.random.seed(34)
+# np.random.seed(34)
 
 class RRT:
     def __init__(self, q_init, K, delta, domain):
@@ -22,6 +22,7 @@ class RRT:
         self.scatter = None
         self.lines = None
         self.animation_speed = 75 # Updates every X milliseconds
+        self.circles_list = []
 
     def distance(self, point1, point2): # Distance between point1 and point2
         return np.sqrt((point2[0] - point1[0])**2 + (point2[1] - point1[1])**2)
@@ -43,11 +44,32 @@ class RRT:
         
 
     def new_configuration(self): # Create a new point 1 unit from the nearest point, in the direction of the random point
-        vector = np.array(self.q_rand) - np.array(self.q_near)
-        vector_length = np.linalg.norm(vector)
-        unit_vector = vector/vector_length
-        self.q_new = tuple(round(coord, 3) for coord in (self.q_near + unit_vector))
-        self.update_lines()
+        self.collision_check = False
+        while self.collision_check == False:
+            vector = np.array(self.q_rand) - np.array(self.q_near)
+            vector_length = np.linalg.norm(vector)
+            unit_vector = vector/vector_length
+            self.q_new = tuple(round(coord, 3) for coord in (self.q_near + unit_vector))
+            self.check_for_collision()
+
+        # self.update_lines()
+    
+    def check_for_collision(self):
+        # print(self.circles_list)
+        for circle in self.circles_list: # check each circle in the list
+            coord = circle["coordinate"] # get the center coordinate of the circle
+            distance = self.distance(coord, self.q_new)
+            if distance < circle["size"]:
+                self.collision_check = False
+                print("COLLISION")
+                return
+            
+        self.collision_check = True
+            
+
+
+
+
 
     def update_tree(self):
         for node in self.G["nodes"]: # Finds parent node name.
@@ -66,8 +88,7 @@ class RRT:
         new_entry = (self.q_near, self.q_new)
         self.line_segments.append(new_entry)
 
-    def create_obstacles(self):
-        # Creates the obstacles. Still need to make it so they can't spawn in the center (where q_init is)
+    def initialize_obstacles(self):
         self.circles_list = []
         counter = 0
         for i in range(15):
@@ -79,7 +100,11 @@ class RRT:
                          "coordinate": coord,
                          "size": size}
             self.circles_list.append(new_entry)
-            circle = plt.Circle((x_rand, y_rand), size)
+
+
+    def create_obstacles(self):
+        for circle in self.circles_list:
+            circle = plt.Circle((circle["coordinate"][0], circle["coordinate"][1]), circle["size"])
             self.ax.add_patch(circle)
             counter += 1
 
@@ -109,10 +134,13 @@ class RRT:
         plt.show()
 
     def main(self):
+        self.initialize_obstacles()
         for i in range(self.K):
             self.random_configuration()  # Generates random point
             self.nearest_vertex()  # Finds closest existing node
             self.new_configuration()  # Creates new node, one unit away
+            # self.check_collisions()
+            self.update_lines()
             self.update_tree()  # Adds information node to tree (self.G)
             self.update_lines()  # Adds new line information to list
             
