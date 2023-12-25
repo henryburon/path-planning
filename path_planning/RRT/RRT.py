@@ -5,7 +5,7 @@ import numpy as np
 import imageio as iio
 import time
 
-# np.random.seed(34)
+np.random.seed(34)
 
 class RRT:
     def __init__(self, q_init, K, delta, domain):
@@ -66,10 +66,28 @@ class RRT:
         new_entry = (self.q_near, self.q_new)
         self.line_segments.append(new_entry)
 
+    def create_obstacles(self):
+        # Creates the obstacles. Still need to make it so they can't spawn in the center (where q_init is)
+        self.circles_list = []
+        counter = 0
+        for i in range(15):
+            x_rand = round(np.random.uniform(self.domain[0],self.domain[1]), 5)
+            y_rand = round(np.random.uniform(self.domain[2],self.domain[3]), 5)
+            size = np.random.randint(1, 11)
+            coord = (x_rand, y_rand)
+            new_entry = {"name": f"c{counter}",
+                         "coordinate": coord,
+                         "size": size}
+            self.circles_list.append(new_entry)
+            circle = plt.Circle((x_rand, y_rand), size)
+            self.ax.add_patch(circle)
+            counter += 1
+
     def initialize_plot(self):
         self.scatter = self.ax.scatter([], [], c='blue', s=5)  # Create an empty scatter plot
         self.lines = LineCollection([], color="blue", linewidth=0.5)  # Create an empty lines plot
         self.ax.add_collection(self.lines)
+        self.create_obstacles()
 
         self.ax.set_title("Rapidly-Exploring Random Tree")
         self.ax.set_xlim(self.domain[0], self.domain[1])
