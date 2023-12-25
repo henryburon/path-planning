@@ -24,9 +24,12 @@ class RRT:
         self.circles_list = []
         self.game_over = False
         self.iterations = 0
-        self.animation_speed = 75 # Updates every X milliseconds
+        self.animation_speed = 35 # Updates every X milliseconds
         self.fig, self.ax = plt.subplots(figsize=(10,10))
         self.initialize_obstacles()
+        self.initialize_goal()
+        self.initialize_plot()
+        self.find_random_seed()
 
 
 
@@ -37,6 +40,11 @@ class RRT:
     def distance(self, point1, point2):
         # Distance between point1 and point2 in 3D
         return np.sqrt((point2[0] - point1[0])**2 + (point2[1] - point1[1])**2)
+    
+    def find_random_seed(self):
+        random_state = np.random.get_state()
+        seed = random_state[1][0]
+        print("Random Seed:", seed)
     
     def initialize_obstacles(self):
         self.circles_list = []
@@ -66,7 +74,30 @@ class RRT:
         self.ax.set_title("Rapidly-Exploring Random Tree")
         self.ax.set_xlim(self.domain[0], self.domain[1])
         self.ax.set_ylim(self.domain[2], self.domain[3])
-    
+
+        self.ax.scatter(self.x_goal, self.y_goal, c='red', s=100)
+
+    def initialize_goal(self):
+        acceptable_goal = False
+        
+        while acceptable_goal == False:
+            check1 = False
+            check2 = False
+            self.x_goal = round(np.random.uniform(self.domain[0],self.domain[1]), 5)
+            self.y_goal = round(np.random.uniform(self.domain[2],self.domain[3]), 5)
+
+            if abs(50 - self.x_goal) > 35 and abs(50 - self.y_goal) > 35:
+                check1 = True
+            for circle in self.circles_list:
+                 coord = circle["coordinate"]
+                 goal_coord = (self.x_goal, self.y_goal)
+                 distance = self.distance(coord, goal_coord)
+                 if distance > circle["size"]:
+                      check2 = True
+            if check1 and check2:
+                acceptable_goal = True
+                print(f"Goal: ({self.x_goal},{self.y_goal})")
+        
     def update_plot(self, i):
         # Update the scatter plot with points up to index 'i'
         x_data = [node["coordinate"][0] for node in self.G["nodes"][:i]]
@@ -143,10 +174,7 @@ class RRT:
                 self.transition_to("RANDOM_CONFIG")
 
         elif self.state == "ANIMATE":
-            self.initialize_plot()
             anim = FuncAnimation(self.fig, self.update_plot, frames=len(self.G["nodes"]), interval=self.animation_speed)
-
-            
             plt.show()
             
          
