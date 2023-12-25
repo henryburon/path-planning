@@ -25,13 +25,10 @@ class RRT:
         self.game_over = False
         self.iterations = 0
         self.animation_speed = 75 # Updates every X milliseconds
-        self.fig, self.ax = plt.subplots()
+        self.fig, self.ax = plt.subplots(figsize=(10,10))
+        self.initialize_obstacles()
 
 
-
-        
-        
-        # self.initialize_plot()
 
 
     def transition_to(self, new_state):
@@ -41,10 +38,30 @@ class RRT:
         # Distance between point1 and point2 in 3D
         return np.sqrt((point2[0] - point1[0])**2 + (point2[1] - point1[1])**2)
     
+    def initialize_obstacles(self):
+        self.circles_list = []
+        counter = 0
+        for i in range(15):
+            x_rand = round(np.random.uniform(self.domain[0],self.domain[1]), 5)
+            y_rand = round(np.random.uniform(self.domain[2],self.domain[3]), 5)
+            size = np.random.randint(1, 11)
+            coord = (x_rand, y_rand)
+            new_entry = {"name": f"c{counter}",
+                         "coordinate": coord,
+                         "size": size}
+            self.circles_list.append(new_entry)
+
+    def create_obstacles(self):
+        for circle in self.circles_list:
+            circle = plt.Circle((circle["coordinate"][0], circle["coordinate"][1]), circle["size"])
+            self.ax.add_patch(circle)
+            # counter += 1
+    
     def initialize_plot(self):
         self.scatter = self.ax.scatter([], [], c='blue', s=5)  # Create an empty scatter plot
         self.lines = LineCollection([], color="blue", linewidth=0.5)  # Create an empty lines plot
         self.ax.add_collection(self.lines)
+        self.create_obstacles()
 
         self.ax.set_title("Rapidly-Exploring Random Tree")
         self.ax.set_xlim(self.domain[0], self.domain[1])
@@ -60,6 +77,7 @@ class RRT:
         lines_data = self.line_segments[:i]
         self.lines.set_segments(lines_data)
 
+#######################################################################################################
 
     def process(self):
         if self.state == "RANDOM_CONFIG":
@@ -68,7 +86,7 @@ class RRT:
             y_rand = round(np.random.uniform(self.domain[2], self.domain[3]), 5)
             self.q_rand = (x_rand, y_rand)
             self.transition_to("FIND_NEAREST_NODE")
-        
+
         elif self.state == "FIND_NEAREST_NODE":
             # Finds closest existing node to q_rand. Sets closest node to q_near.
             coord_distance = []
@@ -87,7 +105,18 @@ class RRT:
             vector_length = np.linalg.norm(vector)
             unit_vector = vector/vector_length
             self.q_new = tuple(round(coord, 3) for coord in (self.q_near + unit_vector))
-            self.transition_to("UPDATE_TREE")
+            self.transition_to("CHECK_COLLISIONS")
+
+        elif self.state == "CHECK_COLLISIONS":
+            for circle in self.circles_list: # check each circle in the list
+                coord = circle["coordinate"] # get the center coordinate of the circle
+                distance = self.distance(coord, self.q_new)
+                if distance < circle["size"]:
+                    self.state = "RANDOM_CONFIG"
+                    return
+                
+                else:
+                    self.state = "UPDATE_TREE"
 
         elif self.state == "UPDATE_TREE":
             for node in self.G["nodes"]:
@@ -114,9 +143,6 @@ class RRT:
                 self.transition_to("RANDOM_CONFIG")
 
         elif self.state == "ANIMATE":
-            # x_data = [node["coordinate"][0] for node in self.G["nodes"]]
-            # y_data = [node["coordinate"][1] for node in self.G["nodes"]]
-            # self.scatter.set_offsets(np.column_stack((x_data, y_data)))
             self.initialize_plot()
             anim = FuncAnimation(self.fig, self.update_plot, frames=len(self.G["nodes"]), interval=self.animation_speed)
 
@@ -128,14 +154,6 @@ class RRT:
 
         
             
-        
-        
-            
-
-            
-        
-
-
 
 
 q_init = (50, 50)
@@ -144,5 +162,8 @@ delta = 1
 domain = (0, 100, 0, 100)
 
 my_rrt = RRT(q_init, K, delta, domain)
-while not my_rrt.game_over:
-    my_rrt.process()
+try:
+    while not my_rrt.game_over:
+        my_rrt.process()
+except KeyboardInterrupt:
+    print("Closing program.")
