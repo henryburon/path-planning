@@ -19,14 +19,17 @@ class RRT:
                              "parent": None}]}  
         self.counter = 2
         self.line_segments = []
-        self.fig, self.ax = plt.subplots()
         self.scatter = None
         self.lines = None
-        self.animation_speed = 75 # Updates every X milliseconds
         self.circles_list = []
         self.game_over = False
         self.iterations = 0
-        self.all_coordinates = []
+        self.animation_speed = 75 # Updates every X milliseconds
+        self.fig, self.ax = plt.subplots()
+
+
+
+        
         
         # self.initialize_plot()
 
@@ -36,15 +39,34 @@ class RRT:
 
     def distance(self, point1, point2):
         # Distance between point1 and point2 in 3D
-        return np.sqrt((point2[0] - point1[0])**2 + (point2[1] - point1[1])**2 + (point2[2] - point1[2])**2)
+        return np.sqrt((point2[0] - point1[0])**2 + (point2[1] - point1[1])**2)
+    
+    def initialize_plot(self):
+        self.scatter = self.ax.scatter([], [], c='blue', s=5)  # Create an empty scatter plot
+        self.lines = LineCollection([], color="blue", linewidth=0.5)  # Create an empty lines plot
+        self.ax.add_collection(self.lines)
+
+        self.ax.set_title("Rapidly-Exploring Random Tree")
+        self.ax.set_xlim(self.domain[0], self.domain[1])
+        self.ax.set_ylim(self.domain[2], self.domain[3])
+    
+    def update_plot(self, i):
+        # Update the scatter plot with points up to index 'i'
+        x_data = [node["coordinate"][0] for node in self.G["nodes"][:i]]
+        y_data = [node["coordinate"][1] for node in self.G["nodes"][:i]]
+        self.scatter.set_offsets(np.column_stack((x_data, y_data)))
+
+        # Update the lines plot with line segments up to index 'i'
+        lines_data = self.line_segments[:i]
+        self.lines.set_segments(lines_data)
+
 
     def process(self):
         if self.state == "RANDOM_CONFIG":
-            # Finds a random point in 3D (x, y, z)
+            # Finds a random point in 2D
             x_rand = round(np.random.uniform(self.domain[0], self.domain[1]), 5)
             y_rand = round(np.random.uniform(self.domain[2], self.domain[3]), 5)
-            z_rand = round(np.random.uniform(self.domain[4], self.domain[5]), 5)
-            self.q_rand = (x_rand, y_rand, z_rand)
+            self.q_rand = (x_rand, y_rand)
             self.transition_to("FIND_NEAREST_NODE")
         
         elif self.state == "FIND_NEAREST_NODE":
@@ -92,19 +114,15 @@ class RRT:
                 self.transition_to("RANDOM_CONFIG")
 
         elif self.state == "ANIMATE":
-            fig = plt.figure()
-            ax = fig.add_subplot(projection='3d')
+            # x_data = [node["coordinate"][0] for node in self.G["nodes"]]
+            # y_data = [node["coordinate"][1] for node in self.G["nodes"]]
+            # self.scatter.set_offsets(np.column_stack((x_data, y_data)))
+            self.initialize_plot()
+            anim = FuncAnimation(self.fig, self.update_plot, frames=len(self.G["nodes"]), interval=self.animation_speed)
 
-            x_data = [node["coordinate"][0] for node in self.G["nodes"]]
-            y_data = [node["coordinate"][1] for node in self.G["nodes"]]
-            z_data = [node["coordinate"][2] for node in self.G["nodes"]]
-
-            ax.scatter(x_data, y_data, z_data)
-            ax.set_xlabel('X Label')
-            ax.set_ylabel('Y Label')
-            ax.set_zlabel('Z Label')
+            
             plt.show()
-
+            
          
         
 
@@ -120,10 +138,10 @@ class RRT:
 
 
 
-q_init = (50, 50, 50)
+q_init = (50, 50)
 K = 500
 delta = 1
-domain = (0, 100, 0, 100, 0, 100)
+domain = (0, 100, 0, 100)
 
 my_rrt = RRT(q_init, K, delta, domain)
 while not my_rrt.game_over:
