@@ -4,7 +4,7 @@ from matplotlib.animation import FuncAnimation
 import numpy as np
 import imageio as iio
 
-# np.random.seed(123)
+np.random.seed(19483)
 
 class RRT:
     def __init__(self, q_init, K, delta, domain):
@@ -49,7 +49,7 @@ class RRT:
     def initialize_obstacles(self):
         self.circles_list = []
         counter = 0
-        for i in range(25):
+        for i in range(30):
             x_rand = round(np.random.uniform(self.domain[0],self.domain[1]), 5)
             y_rand = round(np.random.uniform(self.domain[2],self.domain[3]), 5)
             size = np.random.randint(1, 11)
@@ -61,7 +61,7 @@ class RRT:
 
     def create_obstacles(self):
         for circle in self.circles_list:
-            circle = plt.Circle((circle["coordinate"][0], circle["coordinate"][1]), circle["size"])
+            circle = plt.Circle((circle["coordinate"][0], circle["coordinate"][1]), circle["size"], color='darkblue')
             self.ax.add_patch(circle)
             # counter += 1
     
@@ -71,7 +71,7 @@ class RRT:
         self.ax.add_collection(self.lines)
         self.create_obstacles()
 
-        self.ax.set_title("Rapidly-Exploring Random Tree")
+        self.ax.set_title("Rapidly-Exploring Random Tree", fontsize=16, fontweight='bold')
         self.ax.set_xlim(self.domain[0], self.domain[1])
         self.ax.set_ylim(self.domain[2], self.domain[3])
 
