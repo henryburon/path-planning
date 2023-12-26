@@ -3,9 +3,8 @@ from matplotlib.collections import LineCollection
 from matplotlib.animation import FuncAnimation
 import numpy as np
 import imageio as iio
-import time
 
-# np.random.seed(34)
+# np.random.seed(123)
 
 class RRT:
     def __init__(self, q_init, K, delta, domain):
@@ -21,17 +20,18 @@ class RRT:
         self.line_segments = []
         self.scatter = None
         self.lines = None
+        self.path_exists = None
         self.circles_list = []
         self.game_over = False
         self.iterations = 0
-        self.animation_speed = 35 # Updates every X milliseconds
+        self.animation_speed = 40 # Updates every X milliseconds
         self.fig, self.ax = plt.subplots(figsize=(10,10))
         self.initialize_obstacles()
         self.initialize_goal()
         self.initialize_plot()
         self.find_random_seed()
-
-
+        self.spotted_flag = False
+        self.counter1 = 0
 
 
     def transition_to(self, new_state):
@@ -49,7 +49,7 @@ class RRT:
     def initialize_obstacles(self):
         self.circles_list = []
         counter = 0
-        for i in range(15):
+        for i in range(25):
             x_rand = round(np.random.uniform(self.domain[0],self.domain[1]), 5)
             y_rand = round(np.random.uniform(self.domain[2],self.domain[3]), 5)
             size = np.random.randint(1, 11)
@@ -141,15 +141,43 @@ class RRT:
         elif self.state == "CHECK_COLLISIONS":
             for circle in self.circles_list: # check each circle in the list
                 coord = circle["coordinate"] # get the center coordinate of the circle
-                distance = self.distance(coord, self.q_new)
+                distance = self.distance(coord, self.q_new) # find distance between center of circle and the new coordinate
                 if distance < circle["size"]:
                     self.state = "RANDOM_CONFIG"
                     return
                 
                 else:
-                    self.state = "UPDATE_TREE"
+                    self.state = "CHECK_FOR_GOAL"
+
+        elif self.state == "CHECK_FOR_GOAL":
+            # Checks if goal is in sight (not blocked by obstacles)
+            # Not an optimal solution, but should work for this implementation
+            # This functionality is currently incomplete
+            # Sometimes gives false positives, sometimes doesn't give true positives
+            goal_coord = (self.x_goal, self.y_goal)
+            points_on_line = np.linspace(np.array(self.q_new), np.array(goal_coord), 50) # Creates 50 coordinates between the points.
+
+            self.path_exists = True
+            for point in points_on_line: # For each point in the list
+                for circle in self.circles_list: # check each obstacle
+                    circle_coord = circle["coordinate"]
+                    distance = self.distance(point, circle_coord)
+                    if distance < circle["size"]:
+                        self.path_exists = False
+                        
+            if self.path_exists == True:
+                if self.spotted_flag == False:
+                    self.q_spotted = self.q_new
+                    self.spotted_flag = True
+                    # Search for index of self.q_spotted
+                    for node in self.G["nodes"]:
+                        if node["coordinate"] == self.q_spotted:
+                            index = node
+                    
+            self.transition_to("UPDATE_TREE")
 
         elif self.state == "UPDATE_TREE":
+
             for node in self.G["nodes"]:
                 if node["coordinate"] == self.q_near:
                     parent_node = node["name"]
@@ -177,12 +205,6 @@ class RRT:
             anim = FuncAnimation(self.fig, self.update_plot, frames=len(self.G["nodes"]), interval=self.animation_speed)
             plt.show()
             
-         
-        
-
-        
-            
-
 
 q_init = (50, 50)
 K = 500
